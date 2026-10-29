@@ -34,7 +34,9 @@ const API = {
   saveData: function (a) { return saveData(a[0], a[1], a[2]); },
   deleteData: function (a) { return deleteData(a[0], a[1], a[2]); },
   importData: function (a) { return importData(a[0], a[1], a[2]); },
-  graduate: function (a) { return graduate(a[0], a[1]); }
+  graduate: function (a) { return graduate(a[0], a[1]); },
+  publicInfo: function () { return publicInfo(); },
+  saveSettings: function (a) { return saveSettings(a[0], a[1]); }
 };
 
 function doPost(e) {
@@ -158,7 +160,7 @@ function login(username, password) {
   const user = { nama: u.Nama, role: u.Role, username: u.Username };
   CacheService.getScriptCache().put('sess_' + token, JSON.stringify(user), SESSION_SECONDS);
   // data langsung dikirim bersama login supaya tidak perlu request tambahan
-  return { ok: true, token: token, user: user, data: allData_() };
+  return { ok: true, token: token, user: user, data: allData_(), settings: getSettings_() };
 }
 
 function logout(token) {
@@ -169,7 +171,7 @@ function logout(token) {
 /** Satu panggilan untuk semua data: dipakai saat buka aplikasi dan sinkron ulang. */
 function bootstrap(token) {
   const user = auth_(token);
-  return { user: user, data: allData_() };
+  return { user: user, data: allData_(), settings: getSettings_() };
 }
 
 /* ---------- Data ---------- */
@@ -251,5 +253,59 @@ function graduate(token, ids) {
     al.getRange(al.getLastRow() + 1, 1, rows.length, SHEETS.Alumni.length).setNumberFormat('@').setValues(rows);
     removeIds_('Siswa', pick.map(function (s) { return s.ID; }));
     return { ok: true, count: pick.length, tahun: tahun, data: allData_() };
+  } finally { lock.releaseLock(); }
+}
+
+/* ---------- Pengaturan sekolah (nama & logo) ---------- */
+const LOGO_MAX = 45000; // batas karakter per sel Google Sheets = 50.000
+
+function settingsSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName('Settings');
+  if (!sh) {
+    sh = ss.insertSheet('Settings');
+    sh.getRange(1, 1, 1, 2).setValues([['Key', 'Value']]).setFontWeight('bold');
+    sh.getRange(2, 1, sh.getMaxRows() - 1, 2).setNumberFormat('@');
+  }
+  return sh;
+}
+
+function getSettings_() {
+  const sh = settingsSheet_(), last = sh.getLastRow();
+  const s = { NamaSekolah: '', Logo: '' };
+  if (last > 1) {
+    sh.getRange(2, 1, last - 1, 2).getValues().forEach(function (r) {
+      if (r[0] === 'NamaSekolah' || r[0] === 'Logo') s[r[0]] = String(r[1]);
+    });
+  }
+  return s;
+}
+
+function setSetting_(key, val) {
+  const sh = settingsSheet_(), last = sh.getLastRow();
+  const keys = last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues() : [];
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i][0] === key) { sh.getRange(i + 2, 2).setNumberFormat('@').setValue(val); return; }
+  }
+  sh.getRange(last + 1, 1, 1, 2).setNumberFormat('@').setValues([[key, val]]);
+}
+
+/** Tanpa login: dipakai halaman login untuk menampilkan logo & nama sekolah. */
+function publicInfo() {
+  return getSettings_();
+}
+
+function saveSettings(token, obj) {
+  const user = auth_(token);
+  if (user.role !== 'admin') throw new Error('Hanya administrator yang dapat mengubah pengaturan.');
+  const nama = String(obj.NamaSekolah || '').trim().slice(0, 100);
+  const logo = String(obj.Logo || '');
+  if (logo && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/=]+$/.test(logo)) throw new Error('Format logo tidak valid.');
+  if (logo.length > LOGO_MAX) throw new Error('Ukuran logo terlalu besar.');
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    setSetting_('NamaSekolah', nama);
+    setSetting_('Logo', logo);
+    return { ok: true, settings: getSettings_() };
   } finally { lock.releaseLock(); }
 }
