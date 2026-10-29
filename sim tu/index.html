@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#12383A">
 <title>SIM-TU</title>
+<link id="fav" rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -125,10 +126,26 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--board)}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--board);color:#fff;padding:11px 18px;border-radius:8px;z-index:90;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #toast.bad{background:var(--danger)}
 
+/* Logo & pengaturan */
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:44px;height:44px;flex:none;object-fit:contain;background:#fff;border-radius:10px;padding:3px}
+.brand .bt{min-width:0}
+.brand .bt span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.login-logo{display:block;width:96px;height:96px;object-fit:contain;background:#fff;border-radius:16px;padding:8px;margin-bottom:26px}
+.login-school{font-size:20px;font-weight:600;color:#E8F0EE;margin-bottom:14px}
+.login-school:empty{display:none}
+.dash-title{display:flex;align-items:center;gap:14px}
+.dash-logo{width:56px;height:56px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px;flex:none}
+.logo-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.logo-prev{width:112px;height:112px;border:1px dashed #B7C6C2;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:8px}
+.logo-prev img{max-width:100%;max-height:100%;object-fit:contain}
+.hint{color:var(--muted);font-size:13px;margin:10px 0 0}
+.panel .btn.primary{margin-top:8px}
 @media(max-width:900px){
   #login{grid-template-columns:1fr}
   .login-side{padding:32px 24px;justify-content:flex-start}
   .login-side h1{font-size:44px}
+  .login-logo{width:72px;height:72px;margin-bottom:18px}
   #sidebar{transform:translateX(-100%)}
   body.menu-open #sidebar{transform:none}
   body.menu-open #scrim{display:block}
@@ -149,7 +166,9 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--board)}
 <!-- LOGIN -->
 <div id="login" class="hidden">
   <div class="login-side">
+    <img id="loginLogo" class="login-logo hidden" alt="Logo sekolah">
     <h1>SIM-TU</h1>
+    <div id="loginSchool" class="login-school"></div>
     <p>Sistem Informasi Manajemen Tata Usaha. Kelola data siswa, guru, tahun pelajaran, dan alumni dalam satu tempat.</p>
   </div>
   <div class="login-main">
@@ -169,7 +188,7 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--board)}
 <!-- APP -->
 <div id="app" class="hidden">
   <aside id="sidebar">
-    <div class="brand"><b>SIM-TU</b><span>Tata Usaha Sekolah</span></div>
+    <div class="brand"><img id="sbLogo" class="hidden" alt="Logo sekolah"><div class="bt"><b>SIM-TU</b><span id="sbSub">Tata Usaha Sekolah</span></div></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <div class="who"><span id="uname"></span><small id="urole"></small></div>
@@ -187,12 +206,13 @@ input[type=checkbox]{width:17px;height:17px;accent-color:var(--board)}
 <div id="toast" class="hidden"></div>
 <div id="modal-root"></div>
 <input type="file" id="filePick" accept=".xlsx,.xls,.csv" class="hidden">
+<input type="file" id="logoPick" accept="image/png,image/jpeg,image/webp" class="hidden">
 
 <script>
 /* ============================================================
    PENGATURAN: tempel URL Web app Apps Script (berakhiran /exec)
    ============================================================ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbw2UtagvQjte7g7yFxpRLOOP7tU-4nJZp5o6KH9Src95-youEmdC99PPeJDT7wTt1c/exec';
+const API_URL = 'PASTE_URL_WEB_APP_APPS_SCRIPT_DI_SINI';
 
 const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
 const XLSX_URL  = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
@@ -233,16 +253,19 @@ const MENU = [
   ['Siswa','Data Siswa','<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'],
   ['Guru','Data Guru','<path d="M3 7l9-4 9 4-9 4zM7 10v5c0 1.5 2.5 3 5 3s5-1.5 5-3v-5"/>'],
   ['TahunPelajaran','Tahun Pelajaran','<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'],
-  ['Alumni','Alumni','<path d="M12 3l2.7 5.5 6 .9-4.4 4.2 1 6L12 16.8l-5.3 2.8 1-6L3.3 9.4l6-.9z"/>']
+  ['Alumni','Alumni','<path d="M12 3l2.7 5.5 6 .9-4.4 4.2 1 6L12 16.8l-5.3 2.8 1-6L3.3 9.4l6-.9z"/>'],
+  ['pengaturan','Pengaturan','<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>']
 ];
 
 /* ================= State & util ================= */
 const EMPTY=()=>({Siswa:[],Guru:[],TahunPelajaran:[],Alumni:[]});
-let TOKEN=null, USER=null, PAGE='dashboard', DATA=EMPTY(), UI={}, charts={}, lastSync=0;
+let TOKEN=null, USER=null, PAGE='dashboard', DATA=EMPTY(), UI={}, charts={}, lastSync=0, SET={NamaSekolah:'',Logo:''};
+const LSB='simtu_brand';
+const LOGO_MAX=45000;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function persist(){try{localStorage.setItem(LS,JSON.stringify({token:TOKEN,user:USER,data:DATA}))}catch(e){}}
+function persist(){try{localStorage.setItem(LS,JSON.stringify({token:TOKEN,user:USER,data:DATA,settings:SET}))}catch(e){}}
 function readCache(){try{return JSON.parse(localStorage.getItem(LS))}catch(e){return null}}
 function clearCache(){try{localStorage.removeItem(LS)}catch(e){}}
 
@@ -306,7 +329,7 @@ async function doLogin(e){
   try{
     const r=await run('login',$('lu').value,$('lp').value);
     if(!r.ok){$('lerr').textContent=r.message;return}
-    TOKEN=r.token;USER=r.user;DATA=r.data;lastSync=Date.now();persist();enterApp();
+    TOKEN=r.token;USER=r.user;DATA=r.data;setSettings(r.settings);lastSync=Date.now();persist();enterApp();
   }catch(err){$('lerr').textContent=err.message}
   finally{b.disabled=false;b.textContent='Masuk'}
 }
@@ -318,7 +341,7 @@ async function doLogout(){
 function enterApp(){
   $('login').classList.add('hidden');$('app').classList.remove('hidden');
   $('uname').textContent=USER.nama;$('urole').textContent=USER.role==='admin'?'Administrator':USER.role;
-  $('nav').innerHTML=MENU.map(m=>`<a data-p="${m[0]}" onclick="go('${m[0]}')"><svg viewBox="0 0 24 24">${m[2]}</svg>${m[1]}</a>`).join('');
+  $('nav').innerHTML=MENU.filter(m=>m[0]!=='pengaturan'||USER.role==='admin').map(m=>`<a data-p="${m[0]}" onclick="go('${m[0]}')"><svg viewBox="0 0 24 24">${m[2]}</svg>${m[1]}</a>`).join('');
   go('dashboard');
   // muat pustaka berat di latar belakang supaya siap saat dibutuhkan
   loadScript(CHART_URL).catch(()=>{});
@@ -328,22 +351,103 @@ function enterApp(){
 async function syncAll(silent){
   try{
     const r=await run('bootstrap',TOKEN);
-    USER=r.user;DATA=r.data;lastSync=Date.now();persist();
+    USER=r.user;DATA=r.data;setSettings(r.settings);lastSync=Date.now();persist();
     if(!modalOpen())refreshView();
   }catch(e){if(!silent)toast(e.message,true)}
 }
-function refreshView(){PAGE==='dashboard'?renderDashboard():renderModule(PAGE)}
+function refreshView(){if(PAGE==='dashboard')renderDashboard();else if(PAGE!=='pengaturan')renderModule(PAGE)}
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&TOKEN&&Date.now()-lastSync>120000)syncAll(true);
 });
 (function init(){
+  try{const b=JSON.parse(localStorage.getItem(LSB));if(b)SET=Object.assign(SET,b)}catch(e){}
+  applyBrand();
   const c=readCache();
   if(c&&c.token&&c.user){
-    TOKEN=c.token;USER=c.user;DATA=Object.assign(EMPTY(),c.data||{});
+    TOKEN=c.token;USER=c.user;DATA=Object.assign(EMPTY(),c.data||{});if(c.settings)SET=Object.assign(SET,c.settings);applyBrand();
     enterApp();       // tampil langsung dari cache
     syncAll(true);    // lalu segarkan di belakang
-  }else toLogin('');
+  }else{toLogin('');run('publicInfo').then(setSettings).catch(()=>{})}
 })();
+
+/* ================= Identitas sekolah (nama & logo) ================= */
+function applyBrand(){
+  const lg=SET.Logo||'', nm=SET.NamaSekolah||'';
+  const ll=$('loginLogo'),sl=$('sbLogo');
+  if(lg){ll.src=lg;sl.src=lg;$('fav').href=lg}
+  ll.classList.toggle('hidden',!lg);sl.classList.toggle('hidden',!lg);
+  $('loginSchool').textContent=nm;
+  $('sbSub').textContent=nm||'Tata Usaha Sekolah';$('sbSub').title=nm;
+  document.title=nm?('SIM-TU - '+nm):'SIM-TU';
+  try{localStorage.setItem(LSB,JSON.stringify(SET))}catch(e){}
+}
+function setSettings(s){SET=Object.assign({NamaSekolah:'',Logo:''},s||{});applyBrand()}
+
+let pendLogo; // undefined = tidak berubah, '' = hapus, data URL = logo baru
+function renderSettings(){
+  pendLogo=undefined;
+  $('page').innerHTML=`
+  <div class="page-head"><div><h2>Pengaturan</h2><p>Identitas sekolah yang tampil di halaman login dan dashboard.</p></div></div>
+  <div class="panel" style="max-width:640px">
+    <label for="sNama" style="margin-top:0">Nama sekolah</label>
+    <input id="sNama" maxlength="100" value="${esc(SET.NamaSekolah)}" placeholder="Nama sekolah Anda">
+    <label>Logo sekolah</label>
+    <div class="logo-row">
+      <div class="logo-prev" id="lprev"></div>
+      <div>
+        <button class="btn" onclick="$('logoPick').click()">Pilih gambar</button>
+        <button class="btn danger" id="lDel" onclick="removeLogo()">Hapus logo</button>
+        <p class="hint">PNG, JPG, atau WebP. Gambar diperkecil otomatis. PNG berlatar transparan paling bagus hasilnya.</p>
+      </div>
+    </div>
+    <div class="err" id="serr"></div>
+    <button class="btn primary" id="sSave" onclick="saveSettings()">Simpan</button>
+  </div>`;
+  drawLogoPrev();
+}
+function drawLogoPrev(){
+  const src=pendLogo!==undefined?pendLogo:SET.Logo;
+  $('lprev').innerHTML=src?`<img src="${esc(src)}" alt="Pratinjau logo">`:'Belum ada logo';
+  $('lDel').disabled=!src;
+}
+function removeLogo(){pendLogo='';drawLogoPrev()}
+function shrinkImage(file){
+  return new Promise((res,rej)=>{
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type))return rej(new Error('Format harus PNG, JPG, atau WebP.'));
+    if(file.size>8*1024*1024)return rej(new Error('Ukuran file maksimal 8 MB.'));
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let max=256;
+      for(let t=0;t<6;t++){ // perkecil bertahap sampai muat di satu sel Sheets
+        const sc=Math.min(1,max/Math.max(img.width,img.height));
+        const w=Math.max(1,Math.round(img.width*sc)),h=Math.max(1,Math.round(img.height*sc));
+        const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        const out=cv.toDataURL('image/webp',0.85); // browser tanpa WebP otomatis memakai PNG
+        if(out.length<=LOGO_MAX)return res(out);
+        max=Math.round(max*0.75);
+      }
+      rej(new Error('Gambar terlalu rumit. Gunakan logo yang lebih sederhana.'));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Gambar tidak dapat dibaca.'))};
+    img.src=url;
+  });
+}
+$('logoPick').onchange=async function(){
+  const f=this.files[0];this.value='';if(!f)return;
+  $('serr').textContent='';
+  try{pendLogo=await shrinkImage(f);drawLogoPrev()}catch(e){$('serr').textContent=e.message}
+};
+async function saveSettings(){
+  const b=$('sSave');b.disabled=true;b.textContent='Menyimpan...';$('serr').textContent='';
+  try{
+    const logo=pendLogo===undefined?SET.Logo:pendLogo;
+    const r=await run('saveSettings',TOKEN,{NamaSekolah:$('sNama').value.trim(),Logo:logo});
+    setSettings(r.settings);persist();pendLogo=undefined;drawLogoPrev();toast('Pengaturan tersimpan.');
+  }catch(e){$('serr').textContent=e.message}
+  finally{b.disabled=false;b.textContent='Simpan'}
+}
 
 /* ================= Navigasi (instan, tanpa menunggu server) ================= */
 function go(p){
@@ -351,6 +455,7 @@ function go(p){
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.p===p));
   window.scrollTo(0,0);
   if(p==='dashboard')return renderDashboard();
+  if(p==='pengaturan')return renderSettings();
   if(!UI[p])UI[p]={q:'',f:'',page:1,sel:new Set()};
   renderModule(p);
 }
@@ -361,7 +466,7 @@ async function renderDashboard(){
   const S=DATA.Siswa,G=DATA.Guru,A=DATA.Alumni;
   const ta=DATA.TahunPelajaran.find(t=>t.Aktif==='Aktif');
   $('page').innerHTML=`
-  <div class="page-head"><div><h2>Dashboard</h2><p>Ringkasan data sekolah saat ini.</p></div></div>
+  <div class="page-head"><div class="dash-title">${SET.Logo?`<img class="dash-logo" src="${esc(SET.Logo)}" alt="Logo sekolah">`:''}<div><h2>Dashboard</h2><p>${SET.NamaSekolah?esc(SET.NamaSekolah):'Ringkasan data sekolah saat ini.'}</p></div></div></div>
   <div class="stats">
     <div class="stat"><div class="n">${S.length}</div><div class="l">Siswa aktif</div></div>
     <div class="stat"><div class="n">${G.length}</div><div class="l">Guru</div></div>
