@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#12383A">
+<title>SIM-TU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --board:#12383A; --board-2:#1B4D4F; --chalk:#F1C453; --bg:#EDF1EF; --card:#FFFFFF;
+  --text:#18282A; --muted:#5E7274; --line:#D5DEDB; --danger:#B3402F; --ok:#2E7D5B;
+  --sidebar-w:250px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+
+/* Bilah kemajuan: tampil saat ada permintaan ke server, tidak memblokir layar */
+#bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none;
+  background:linear-gradient(90deg,transparent,var(--chalk),transparent) no-repeat;background-size:40% 100%;animation:bar 1s linear infinite}
+#bar.on{opacity:1}
+@keyframes bar{from{background-position:-40% 0}to{background-position:140% 0}}
+
+/* Login */
+#login{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr}
+.login-side{background:var(--board);color:#E8F0EE;padding:56px;display:flex;flex-direction:column;justify-content:flex-end}
+.login-side h1{font-size:64px;line-height:1;margin:0 0 12px;letter-spacing:-1px;color:var(--chalk)}
+.login-side p{max-width:360px;margin:0;color:#B9CCC8;font-size:17px}
+.login-main{display:flex;align-items:center;justify-content:center;padding:32px}
+.login-card{width:100%;max-width:360px}
+.login-card h2{margin:0 0 4px;font-size:24px}
+.login-card .sub{color:var(--muted);margin:0 0 24px}
+label{display:block;font-weight:600;margin:14px 0 6px;font-size:14px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fff}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--board-2);outline-offset:1px}
+.err{color:var(--danger);font-size:14px;min-height:20px;margin-top:10px}
+
+/* Buttons */
+.btn{border:1px solid var(--line);background:#fff;padding:9px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;white-space:nowrap}
+.btn:hover{background:#F3F6F5}
+.btn.primary{background:var(--board);border-color:var(--board);color:#fff}
+.btn.primary:hover{background:var(--board-2)}
+.btn.accent{background:var(--chalk);border-color:var(--chalk);color:#2B2100}
+.btn.accent:hover{background:#E8B93F}
+.btn.danger{color:var(--danger);border-color:#E3BDB5}
+.btn.danger:hover{background:#FBEFEC}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.block{width:100%;margin-top:20px;padding:11px}
+
+/* Layout */
+#app{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);background:var(--board);color:#D3E1DE;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;z-index:30;transition:transform .2s}
+.brand{padding:22px 22px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
+.brand b{display:block;font-size:26px;color:var(--chalk);letter-spacing:-.5px;line-height:1.1}
+.brand span{font-size:13px;color:#9DB5B1}
+nav{padding:12px;flex:1;overflow:auto}
+nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;color:#D3E1DE;text-decoration:none;cursor:pointer;margin-bottom:2px;font-weight:500}
+nav a svg{width:19px;height:19px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav a:hover{background:rgba(255,255,255,.07)}
+nav a.active{background:var(--chalk);color:#2B2100;font-weight:700}
+.side-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:13px}
+.side-foot .who{margin-bottom:10px;color:#fff;font-weight:600}
+.side-foot .who small{display:block;color:#9DB5B1;font-weight:400}
+.side-foot .btn{width:100%;background:transparent;color:#fff;border-color:rgba(255,255,255,.25)}
+.side-foot .btn:hover{background:rgba(255,255,255,.1)}
+#main{margin-left:var(--sidebar-w);flex:1;min-width:0}
+#topbar{display:none;position:sticky;top:0;z-index:20;background:var(--board);color:#fff;padding:10px 14px;align-items:center;gap:12px}
+#topbar button{background:none;border:0;color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:2px 8px}
+#topbar b{color:var(--chalk);font-size:19px}
+#scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:25}
+#page{padding:28px 32px 48px;max-width:1400px}
+.page-head{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+.page-head h2{margin:0;font-size:26px;letter-spacing:-.3px}
+.page-head p{margin:2px 0 0;color:var(--muted)}
+
+/* Dashboard */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.stat .n{font-size:34px;font-weight:700;line-height:1.1;letter-spacing:-1px}
+.stat .l{color:var(--muted);font-size:14px}
+.stat.hl{background:var(--board);color:#fff;border-color:var(--board)}
+.stat.hl .l{color:#A9C2BE}
+.stat.hl .n{color:var(--chalk);font-size:24px;padding-top:8px}
+.charts{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+.panel h3{margin:0 0 12px;font-size:16px}
+.chart-box{position:relative;height:280px}
+.span2{grid-column:1/-1}
+
+/* Table */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.toolbar input,.toolbar select{width:auto;min-width:160px}
+.toolbar .search{flex:1;min-width:180px}
+.table-wrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{background:#F5F8F7;font-weight:600;font-size:14px;color:var(--muted);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#FAFCFB}
+td.act{white-space:nowrap;text-align:right}
+td.act .btn{margin-left:4px}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--board)}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px;font-weight:600;background:#E4ECEA;color:var(--muted)}
+.badge.on{background:#DDF1E7;color:var(--ok)}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.pager{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--muted);font-size:14px;flex-wrap:wrap;gap:8px}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(10,25,26,.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:560px;max-height:92vh;display:flex;flex-direction:column}
+.modal header{padding:18px 22px;border-bottom:1px solid var(--line);font-weight:700;font-size:18px}
+.modal .body{padding:6px 22px 18px;overflow:auto}
+.modal footer{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+
+#busy{position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:80;display:flex;align-items:center;justify-content:center}
+.spin{width:38px;height:38px;border:4px solid #C9D6D3;border-top-color:var(--board);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--board);color:#fff;padding:11px 18px;border-radius:8px;z-index:90;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#toast.bad{background:var(--danger)}
+
+@media(max-width:900px){
+  #login{grid-template-columns:1fr}
+  .login-side{padding:32px 24px;justify-content:flex-start}
+  .login-side h1{font-size:44px}
+  #sidebar{transform:translateX(-100%)}
+  body.menu-open #sidebar{transform:none}
+  body.menu-open #scrim{display:block}
+  #main{margin-left:0}
+  #topbar{display:flex}
+  #page{padding:18px 14px 40px}
+  .stats{grid-template-columns:1fr 1fr}
+  .charts{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .page-head h2{font-size:22px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:2s!important}}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+
+<!-- LOGIN -->
+<div id="login" class="hidden">
+  <div class="login-side">
+    <h1>SIM-TU</h1>
+    <p>Sistem Informasi Manajemen Tata Usaha. Kelola data siswa, guru, tahun pelajaran, dan alumni dalam satu tempat.</p>
+  </div>
+  <div class="login-main">
+    <form class="login-card" onsubmit="doLogin(event)">
+      <h2>Masuk</h2>
+      <p class="sub">Gunakan akun yang diberikan administrator.</p>
+      <label for="lu">Username</label>
+      <input id="lu" autocomplete="username" required>
+      <label for="lp">Password</label>
+      <input id="lp" type="password" autocomplete="current-password" required>
+      <div class="err" id="lerr"></div>
+      <button class="btn primary block" id="lbtn">Masuk</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <aside id="sidebar">
+    <div class="brand"><b>SIM-TU</b><span>Tata Usaha Sekolah</span></div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <div class="who"><span id="uname"></span><small id="urole"></small></div>
+      <button class="btn" onclick="doLogout()">Keluar</button>
+    </div>
+  </aside>
+  <div id="scrim" onclick="toggleMenu(false)"></div>
+  <div id="main">
+    <div id="topbar"><button onclick="toggleMenu(true)" aria-label="Buka menu">&#9776;</button><b>SIM-TU</b></div>
+    <div id="page"></div>
+  </div>
+</div>
+
+<div id="busy" class="hidden"><div class="spin"></div></div>
+<div id="toast" class="hidden"></div>
+<div id="modal-root"></div>
+<input type="file" id="filePick" accept=".xlsx,.xls,.csv" class="hidden">
+
+<script>
+/* ============================================================
+   PENGATURAN: tempel URL Web app Apps Script (berakhiran /exec)
+   ============================================================ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbw2UtagvQjte7g7yFxpRLOOP7tU-4nJZp5o6KH9Src95-youEmdC99PPeJDT7wTt1c/exec';
+
+const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+const XLSX_URL  = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const LS = 'simtu_v2';
+
+/* ================= Konfigurasi modul ================= */
+const CFG = {
+  Siswa: {
+    title:'Data Siswa', desc:'Kelola data siswa aktif. Siswa yang diluluskan otomatis pindah ke Alumni.',
+    cols:[['NIS','NIS'],['NISN','NISN'],['Nama','Nama'],['JK','L/P'],['Kelas','Kelas'],['TglLahir','Tgl. lahir']],
+    fields:[['NIS','NIS','text',1],['NISN','NISN','text'],['Nama','Nama lengkap','text',1],['JK','Jenis kelamin','select',1,['L','P']],['Kelas','Kelas','text',1],['TempatLahir','Tempat lahir','text'],['TglLahir','Tanggal lahir','date'],['NamaOrtu','Nama orang tua/wali','text'],['Alamat','Alamat','textarea']],
+    tpl:['NIS','NISN','Nama','JK','Kelas','TempatLahir','TglLahir','Alamat','NamaOrtu'],
+    sample:['1001','0012345678','Budi Santoso','L','XII IPA 1','Malang','2008-05-17','Jl. Merdeka No. 1','Slamet'],
+    filter:'Kelas', imp:true, select:true
+  },
+  Guru: {
+    title:'Data Guru', desc:'Kelola data guru dan tenaga pengajar.',
+    cols:[['NIP','NIP'],['Nama','Nama'],['JK','L/P'],['Mapel','Mata pelajaran'],['Jabatan','Jabatan'],['NoHP','No. HP'],['Status','Status']],
+    fields:[['NIP','NIP / NUPTK','text',1],['Nama','Nama lengkap','text',1],['JK','Jenis kelamin','select',1,['L','P']],['Mapel','Mata pelajaran','text'],['Jabatan','Jabatan','text'],['NoHP','No. HP','text'],['Status','Status','select',1,['Aktif','Nonaktif']]],
+    tpl:['NIP','Nama','JK','Mapel','Jabatan','NoHP','Status'],
+    sample:['198501012010011001','Siti Aminah, S.Pd','P','Matematika','Guru Mapel','081234567890','Aktif'],
+    imp:true
+  },
+  TahunPelajaran: {
+    title:'Tahun Pelajaran', desc:'Hanya satu tahun pelajaran yang berstatus aktif. Tahun aktif dipakai sebagai tahun kelulusan.',
+    cols:[['Tahun','Tahun pelajaran'],['Semester','Semester'],['Aktif','Status']],
+    fields:[['Tahun','Tahun pelajaran (contoh 2026/2027)','text',1],['Semester','Semester','select',1,['Ganjil','Genap']],['Aktif','Status','select',1,['Aktif','Tidak']]]
+  },
+  Alumni: {
+    title:'Data Alumni', desc:'Terisi otomatis dari siswa yang diluluskan.',
+    cols:[['NIS','NIS'],['Nama','Nama'],['JK','L/P'],['Kelas','Kelas terakhir'],['TahunLulus','Tahun lulus'],['TglLulus','Tgl. lulus']],
+    exportCols:['NIS','NISN','Nama','JK','Kelas','TempatLahir','TglLahir','Alamat','NamaOrtu','TahunLulus','TglLulus'],
+    filter:'TahunLulus', readonly:true
+  }
+};
+const MENU = [
+  ['dashboard','Dashboard','<path d="M4 13h6V4H4zM14 20h6V4h-6zM4 20h6v-4H4z"/>'],
+  ['Siswa','Data Siswa','<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'],
+  ['Guru','Data Guru','<path d="M3 7l9-4 9 4-9 4zM7 10v5c0 1.5 2.5 3 5 3s5-1.5 5-3v-5"/>'],
+  ['TahunPelajaran','Tahun Pelajaran','<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'],
+  ['Alumni','Alumni','<path d="M12 3l2.7 5.5 6 .9-4.4 4.2 1 6L12 16.8l-5.3 2.8 1-6L3.3 9.4l6-.9z"/>']
+];
+
+/* ================= State & util ================= */
+const EMPTY=()=>({Siswa:[],Guru:[],TahunPelajaran:[],Alumni:[]});
+let TOKEN=null, USER=null, PAGE='dashboard', DATA=EMPTY(), UI={}, charts={}, lastSync=0;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function persist(){try{localStorage.setItem(LS,JSON.stringify({token:TOKEN,user:USER,data:DATA}))}catch(e){}}
+function readCache(){try{return JSON.parse(localStorage.getItem(LS))}catch(e){return null}}
+function clearCache(){try{localStorage.removeItem(LS)}catch(e){}}
+
+/* Panggilan ke API Apps Script. Content-Type text/plain agar tidak memicu preflight CORS. */
+let pending=0;
+function bar(on){pending+=on?1:-1;$('bar').classList.toggle('on',pending>0)}
+async function run(fn,...args){
+  if(API_URL.indexOf('PASTE_')===0)throw new Error('API_URL di index.html belum diisi.');
+  bar(true);
+  try{
+    const res=await fetch(API_URL,{method:'POST',body:JSON.stringify({fn,args})});
+    const j=await res.json();
+    if(!j.ok){
+      if(String(j.error).indexOf('SESI_HABIS')>-1){toLogin('Sesi berakhir. Silakan masuk lagi.');throw new Error('Sesi berakhir.')}
+      throw new Error(j.error);
+    }
+    return j.data;
+  }catch(e){
+    if(e instanceof TypeError||e instanceof SyntaxError)throw new Error('Tidak dapat terhubung ke server. Periksa koneksi internet dan pengaturan deploy.');
+    throw e;
+  }finally{bar(false)}
+}
+const _ls={};
+function loadScript(src){
+  return _ls[src]||(_ls[src]=new Promise((res,rej)=>{
+    const s=document.createElement('script');s.src=src;s.onload=res;
+    s.onerror=()=>{delete _ls[src];rej(new Error('Gagal memuat pustaka. Periksa koneksi internet.'))};
+    document.head.appendChild(s);
+  }));
+}
+function busy(on){$('busy').classList.toggle('hidden',!on)}
+let toastT;
+function toast(msg,bad){const t=$('toast');t.textContent=msg;t.className=bad?'bad':'';clearTimeout(toastT);toastT=setTimeout(()=>t.classList.add('hidden'),3800)}
+async function work(p,okMsg){
+  busy(true);
+  try{const r=await p;if(okMsg)toast(okMsg);return r}
+  catch(e){toast(e.message,true);return null}
+  finally{busy(false)}
+}
+function ask(msg,okLabel){
+  return new Promise(res=>{
+    const root=$('modal-root');
+    root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:420px"><div class="body" style="padding-top:22px">${esc(msg)}</div><footer><button class="btn" id="qn">Batal</button><button class="btn primary" id="qy">${esc(okLabel||'Ya, lanjutkan')}</button></footer></div></div>`;
+    $('qn').onclick=()=>{root.innerHTML='';res(false)};
+    $('qy').onclick=()=>{root.innerHTML='';res(true)};
+  });
+}
+function closeModal(){$('modal-root').innerHTML=''}
+function toggleMenu(open){document.body.classList.toggle('menu-open',open)}
+const modalOpen=()=>!!$('modal-root').firstChild;
+
+/* ================= Auth & sinkronisasi ================= */
+function toLogin(msg){
+  TOKEN=null;USER=null;DATA=EMPTY();UI={};clearCache();
+  $('app').classList.add('hidden');$('login').classList.remove('hidden');
+  $('lerr').textContent=msg||'';$('lp').value='';closeModal();busy(false);
+}
+async function doLogin(e){
+  e.preventDefault();
+  const b=$('lbtn');b.disabled=true;b.textContent='Memproses...';$('lerr').textContent='';
+  try{
+    const r=await run('login',$('lu').value,$('lp').value);
+    if(!r.ok){$('lerr').textContent=r.message;return}
+    TOKEN=r.token;USER=r.user;DATA=r.data;lastSync=Date.now();persist();enterApp();
+  }catch(err){$('lerr').textContent=err.message}
+  finally{b.disabled=false;b.textContent='Masuk'}
+}
+async function doLogout(){
+  if(!await ask('Keluar dari SIM-TU?','Keluar'))return;
+  const t=TOKEN;run('logout',t).catch(()=>{});
+  toLogin('');
+}
+function enterApp(){
+  $('login').classList.add('hidden');$('app').classList.remove('hidden');
+  $('uname').textContent=USER.nama;$('urole').textContent=USER.role==='admin'?'Administrator':USER.role;
+  $('nav').innerHTML=MENU.map(m=>`<a data-p="${m[0]}" onclick="go('${m[0]}')"><svg viewBox="0 0 24 24">${m[2]}</svg>${m[1]}</a>`).join('');
+  go('dashboard');
+  // muat pustaka berat di latar belakang supaya siap saat dibutuhkan
+  loadScript(CHART_URL).catch(()=>{});
+  setTimeout(()=>loadScript(XLSX_URL).catch(()=>{}),2500);
+}
+/* Ambil data terbaru di latar belakang tanpa menghalangi pengguna. */
+async function syncAll(silent){
+  try{
+    const r=await run('bootstrap',TOKEN);
+    USER=r.user;DATA=r.data;lastSync=Date.now();persist();
+    if(!modalOpen())refreshView();
+  }catch(e){if(!silent)toast(e.message,true)}
+}
+function refreshView(){PAGE==='dashboard'?renderDashboard():renderModule(PAGE)}
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&TOKEN&&Date.now()-lastSync>120000)syncAll(true);
+});
+(function init(){
+  const c=readCache();
+  if(c&&c.token&&c.user){
+    TOKEN=c.token;USER=c.user;DATA=Object.assign(EMPTY(),c.data||{});
+    enterApp();       // tampil langsung dari cache
+    syncAll(true);    // lalu segarkan di belakang
+  }else toLogin('');
+})();
+
+/* ================= Navigasi (instan, tanpa menunggu server) ================= */
+function go(p){
+  PAGE=p;toggleMenu(false);
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.p===p));
+  window.scrollTo(0,0);
+  if(p==='dashboard')return renderDashboard();
+  if(!UI[p])UI[p]={q:'',f:'',page:1,sel:new Set()};
+  renderModule(p);
+}
+
+/* ================= Dashboard (dihitung dari data lokal) ================= */
+function countBy(arr,k){const m={};arr.forEach(x=>{const v=x[k]||'-';m[v]=(m[v]||0)+1});return m}
+async function renderDashboard(){
+  const S=DATA.Siswa,G=DATA.Guru,A=DATA.Alumni;
+  const ta=DATA.TahunPelajaran.find(t=>t.Aktif==='Aktif');
+  $('page').innerHTML=`
+  <div class="page-head"><div><h2>Dashboard</h2><p>Ringkasan data sekolah saat ini.</p></div></div>
+  <div class="stats">
+    <div class="stat"><div class="n">${S.length}</div><div class="l">Siswa aktif</div></div>
+    <div class="stat"><div class="n">${G.length}</div><div class="l">Guru</div></div>
+    <div class="stat"><div class="n">${A.length}</div><div class="l">Alumni</div></div>
+    <div class="stat hl"><div class="l">Tahun pelajaran aktif</div><div class="n">${ta?esc(ta.Tahun+' '+ta.Semester):'-'}</div></div>
+  </div>
+  <div class="charts">
+    <div class="panel"><h3>Jumlah siswa per kelas</h3><div class="chart-box"><canvas id="c1"></canvas></div></div>
+    <div class="panel"><h3>Komposisi jenis kelamin</h3><div class="chart-box"><canvas id="c2"></canvas></div></div>
+    <div class="panel span2"><h3>Jumlah alumni per tahun lulus</h3><div class="chart-box"><canvas id="c3"></canvas></div></div>
+  </div>`;
+  try{await loadScript(CHART_URL)}catch(e){return toast(e.message,true)}
+  if(PAGE!=='dashboard'||!$('c1'))return;
+  Object.values(charts).forEach(c=>c.destroy());charts={};
+  const G1='#1B4D4F',Y='#F1C453';
+  const pk=countBy(S,'Kelas'),pj=countBy(S,'JK'),pa=countBy(A,'TahunLulus');
+  const kelas=Object.keys(pk).sort(),thn=Object.keys(pa).sort();
+  const base={responsive:true,maintainAspectRatio:false,animation:{duration:300},plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}};
+  charts.c1=new Chart($('c1'),{type:'bar',data:{labels:kelas,datasets:[{data:kelas.map(k=>pk[k]),backgroundColor:G1,borderRadius:4}]},options:base});
+  const jk={L:'Laki-laki',P:'Perempuan'};
+  charts.c2=new Chart($('c2'),{type:'doughnut',data:{labels:Object.keys(pj).map(k=>jk[k]||k),datasets:[{data:Object.values(pj),backgroundColor:[G1,Y,'#9DB5B1'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},plugins:{legend:{position:'bottom'}}}});
+  charts.c3=new Chart($('c3'),{type:'bar',data:{labels:thn,datasets:[{data:thn.map(k=>pa[k]),backgroundColor:Y,borderRadius:4}]},options:base});
+}
+
+/* ================= Modul tabel ================= */
+function filtered(name){
+  const u=UI[name],c=CFG[name];let r=DATA[name]||[];
+  if(u.f&&c.filter)r=r.filter(x=>x[c.filter]===u.f);
+  if(u.q){const q=u.q.toLowerCase();r=r.filter(x=>c.cols.some(([k])=>String(x[k]).toLowerCase().indexOf(q)>-1))}
+  return r;
+}
+function renderModule(name){
+  const c=CFG[name],u=UI[name];
+  const opts=c.filter?[...new Set((DATA[name]||[]).map(x=>x[c.filter]).filter(Boolean))].sort():[];
+  let btns='';
+  if(!c.readonly)btns+=`<button class="btn primary" onclick="openForm('${name}')">+ Tambah</button>`;
+  if(c.imp)btns+=`<button class="btn" onclick="pickFile('${name}')">Import Excel</button><button class="btn" onclick="tplXls('${name}')">Unduh template</button>`;
+  btns+=`<button class="btn" onclick="exportXls('${name}')">Export Excel</button>`;
+  if(name==='Siswa')btns+=`<button class="btn accent" id="gSel" onclick="gradSel()">Luluskan terpilih</button><button class="btn accent" onclick="gradAll()">Luluskan semua</button>`;
+  $('page').innerHTML=`
+  <div class="page-head"><div><h2>${c.title}</h2><p>${c.desc}</p></div></div>
+  <div class="toolbar">
+    <input class="search" id="q" type="search" placeholder="Cari ${c.title.toLowerCase()}" value="${esc(u.q)}">
+    ${c.filter?`<select id="fl"><option value="">Semua ${c.filter==='Kelas'?'kelas':'tahun lulus'}</option>${opts.map(o=>`<option ${o===u.f?'selected':''}>${esc(o)}</option>`).join('')}</select>`:''}
+  </div>
+  <div class="toolbar">${btns}</div>
+  <div class="table-wrap"><table><thead id="th"></thead><tbody id="tb"></tbody></table></div>
+  <div class="pager" id="pg"></div>`;
+  $('q').oninput=e=>{u.q=e.target.value;u.page=1;drawRows(name)};
+  if($('fl'))$('fl').onchange=e=>{u.f=e.target.value;u.page=1;drawRows(name)};
+  drawRows(name);
+}
+const PS=25;
+function drawRows(name){
+  const c=CFG[name],u=UI[name],rows=filtered(name),pages=Math.max(1,Math.ceil(rows.length/PS));
+  if(u.page>pages)u.page=pages;
+  const view=rows.slice((u.page-1)*PS,u.page*PS);
+  const allOn=view.length&&view.every(r=>u.sel.has(r.ID));
+  $('th').innerHTML='<tr>'+(c.select?`<th style="width:40px"><input type="checkbox" ${allOn?'checked':''} onchange="selPage('${name}',this.checked)" aria-label="Pilih semua di halaman ini"></th>`:'')
+    +'<th style="width:44px">No</th>'+c.cols.map(x=>`<th>${x[1]}</th>`).join('')+(c.readonly?'':'<th></th>')+'</tr>';
+  if(!rows.length){
+    $('tb').innerHTML=`<tr><td colspan="${c.cols.length+4}" class="empty">${(DATA[name]||[]).length?'Tidak ada data yang cocok dengan pencarian.':(c.readonly?'Belum ada alumni. Luluskan siswa dari menu Data Siswa.':'Belum ada data. Klik Tambah'+(c.imp?' atau Import Excel':'')+' untuk mulai.')}</td></tr>`;
+  }else{
+    $('tb').innerHTML=view.map((r,i)=>'<tr>'+(c.select?`<td><input type="checkbox" ${u.sel.has(r.ID)?'checked':''} onchange="selOne('${name}','${r.ID}',this.checked)" aria-label="Pilih ${esc(r.Nama)}"></td>`:'')
+      +`<td>${(u.page-1)*PS+i+1}</td>`+c.cols.map(([k])=>`<td>${cellHtml(name,k,r[k])}</td>`).join('')
+      +(c.readonly?'':`<td class="act">${name==='TahunPelajaran'&&r.Aktif!=='Aktif'?`<button class="btn sm" onclick="activateTA('${r.ID}')">Aktifkan</button>`:''}${name==='Siswa'?`<button class="btn sm" onclick="gradOne('${r.ID}')">Luluskan</button>`:''}<button class="btn sm" onclick="openForm('${name}','${r.ID}')">Edit</button><button class="btn sm danger" onclick="delOne('${name}','${r.ID}')">Hapus</button></td>`)+'</tr>').join('');
+  }
+  $('pg').innerHTML=`<span>${rows.length} data${u.sel.size?` &middot; ${u.sel.size} dipilih`:''}</span><span><button class="btn sm" ${u.page<=1?'disabled':''} onclick="UI['${name}'].page--;drawRows('${name}')">Sebelumnya</button> Halaman ${u.page} dari ${pages} <button class="btn sm" ${u.page>=pages?'disabled':''} onclick="UI['${name}'].page++;drawRows('${name}')">Berikutnya</button></span>`;
+  if($('gSel'))$('gSel').textContent=u.sel.size?`Luluskan terpilih (${u.sel.size})`:'Luluskan terpilih';
+}
+function cellHtml(name,k,v){
+  if(name==='TahunPelajaran'&&k==='Aktif')return v==='Aktif'?'<span class="badge on">Aktif</span>':'<span class="badge">Tidak aktif</span>';
+  if(k==='Status')return `<span class="badge ${v==='Aktif'?'on':''}">${esc(v)}</span>`;
+  return esc(v);
+}
+function selOne(n,id,on){const s=UI[n].sel;on?s.add(id):s.delete(id);drawRows(n)}
+function selPage(n,on){const u=UI[n];filtered(n).slice((u.page-1)*PS,u.page*PS).forEach(r=>on?u.sel.add(r.ID):u.sel.delete(r.ID));drawRows(n)}
+
+/* ================= Form tambah / edit ================= */
+function openForm(name,id){
+  const c=CFG[name],rec=id?(DATA[name].find(x=>x.ID===id)||{}):{};
+  const f=c.fields.map(([k,l,t,req,o])=>{
+    let inp;
+    if(t==='select')inp=`<select id="f_${k}">${o.map(v=>`<option ${rec[k]===v?'selected':''}>${v}</option>`).join('')}</select>`;
+    else if(t==='textarea')inp=`<textarea id="f_${k}" rows="2">${esc(rec[k])}</textarea>`;
+    else inp=`<input id="f_${k}" type="${t}" value="${esc(rec[k])}">`;
+    return `<div style="${t==='textarea'?'grid-column:1/-1':''}"><label for="f_${k}">${l}${req?' *':''}</label>${inp}</div>`;
+  }).join('');
+  $('modal-root').innerHTML=`<div class="modal-bg"><div class="modal"><header>${id?'Edit':'Tambah'} ${c.title.toLowerCase()}</header><div class="body"><div class="grid2">${f}</div><div class="err" id="ferr"></div></div><footer><button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" id="fsave" onclick="saveForm('${name}','${id||''}')">Simpan</button></footer></div></div>`;
+}
+async function saveForm(name,id){
+  const c=CFG[name],o={ID:id};
+  for(const [k,l,t,req] of c.fields){
+    o[k]=$('f_'+k).value.trim();
+    if(req&&!o[k]){$('ferr').textContent=l+' wajib diisi.';return}
+  }
+  const b=$('fsave');b.disabled=true;b.textContent='Menyimpan...';
+  try{
+    const r=await run('saveData',TOKEN,name,o);
+    const list=DATA[name],i=list.findIndex(x=>x.ID===r.id);
+    const rec=Object.assign({},i>-1?list[i]:{},o,{ID:r.id});
+    if(i>-1)list[i]=rec;else list.push(rec);
+    if(name==='TahunPelajaran'&&rec.Aktif==='Aktif')list.forEach(x=>{if(x.ID!==rec.ID&&x.Aktif==='Aktif')x.Aktif='Tidak'});
+    persist();closeModal();toast('Data tersimpan.');renderModule(name);
+  }catch(e){$('ferr').textContent=e.message;b.disabled=false;b.textContent='Simpan'}
+}
+async function delOne(name,id){
+  const r=DATA[name].find(x=>x.ID===id)||{};
+  if(!await ask(`Hapus "${r.Nama||r.Tahun||'data ini'}"? Data yang dihapus tidak bisa dikembalikan.`,'Hapus'))return;
+  if(await work(run('deleteData',TOKEN,name,[id]),'Data dihapus.')){
+    DATA[name]=DATA[name].filter(x=>x.ID!==id);UI[name].sel.delete(id);persist();renderModule(name);
+  }
+}
+async function activateTA(id){
+  const r=DATA.TahunPelajaran.find(x=>x.ID===id);
+  if(await work(run('saveData',TOKEN,'TahunPelajaran',Object.assign({},r,{Aktif:'Aktif'})),'Tahun pelajaran diaktifkan.')){
+    DATA.TahunPelajaran.forEach(x=>x.Aktif=x.ID===id?'Aktif':'Tidak');persist();renderModule('TahunPelajaran');
+  }
+}
+
+/* ================= Luluskan ================= */
+async function doGraduate(ids,msg){
+  if(!await ask(msg,'Luluskan'))return;
+  const r=await work(run('graduate',TOKEN,ids));
+  if(r){
+    DATA=r.data;UI.Siswa.sel.clear();persist();renderModule('Siswa');
+    toast(`${r.count} siswa diluluskan (tahun ${r.tahun||'-'}) dan masuk ke data Alumni.`);
+  }
+}
+function gradOne(id){const r=DATA.Siswa.find(x=>x.ID===id);doGraduate([id],`Luluskan ${r.Nama}? Siswa akan dipindahkan ke data Alumni.`)}
+function gradSel(){const ids=[...UI.Siswa.sel];if(!ids.length)return toast('Pilih siswa dengan kotak centang dulu.',true);doGraduate(ids,`Luluskan ${ids.length} siswa terpilih? Mereka akan dipindahkan ke data Alumni.`)}
+function gradAll(){const n=DATA.Siswa.length;if(!n)return toast('Tidak ada siswa untuk diluluskan.',true);doGraduate('ALL',`Luluskan SEMUA ${n} siswa? Seluruhnya akan dipindahkan ke data Alumni.`)}
+
+/* ================= Excel (pustaka dimuat saat dibutuhkan) ================= */
+function dstr(d){const x=new Date(d.getTime()+12*3600*1000);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')}
+const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
+async function needXlsx(){
+  try{await loadScript(XLSX_URL);return true}catch(e){toast(e.message,true);return false}
+}
+async function tplXls(name){
+  if(!await needXlsx())return;
+  const c=CFG[name],ws=XLSX.utils.aoa_to_sheet([c.tpl,c.sample]);
+  ws['!cols']=c.tpl.map(()=>({wch:20}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,name);
+  XLSX.writeFile(wb,`Template_${name}.xlsx`);
+  toast('Template diunduh. Hapus baris contoh sebelum mengisi data.');
+}
+async function exportXls(name){
+  const c=CFG[name],keys=c.exportCols||c.tpl||c.cols.map(x=>x[0]);
+  const rows=filtered(name);
+  if(!rows.length)return toast('Tidak ada data untuk diexport.',true);
+  if(!await needXlsx())return;
+  const ws=XLSX.utils.aoa_to_sheet([keys].concat(rows.map(r=>keys.map(k=>r[k]))));
+  ws['!cols']=keys.map(()=>({wch:20}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,name);
+  XLSX.writeFile(wb,`${name}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+let importTarget=null;
+function pickFile(name){importTarget=name;$('filePick').value='';$('filePick').click()}
+$('filePick').onchange=async function(){
+  const f=this.files[0];if(!f||!importTarget)return;
+  const name=importTarget,c=CFG[name];
+  busy(true);
+  try{
+    await loadScript(XLSX_URL);
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});
+    const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:true});
+    const map={};c.tpl.forEach(k=>map[norm(k)]=k);
+    const rows=raw.map(r=>{
+      const o={};
+      Object.keys(r).forEach(h=>{const k=map[norm(h)];if(!k)return;const v=r[h];o[k]=v instanceof Date?dstr(v):String(v).trim()});
+      return o;
+    }).filter(o=>Object.values(o).some(v=>v!==''));
+    if(!rows.length)throw new Error('File kosong atau judul kolom tidak sesuai template.');
+    if(!Object.keys(rows[0]).length)throw new Error('Judul kolom tidak dikenali. Gunakan template yang disediakan.');
+    busy(false);
+    if(!await ask(`Import ${rows.length} baris dari "${f.name}" ke ${c.title.toLowerCase()}? Baris dengan ${name==='Siswa'?'NIS':'NIP'} kosong atau sudah terdaftar akan dilewati.`,'Import'))return;
+    busy(true);
+    const res=await run('importData',TOKEN,name,rows);
+    DATA=res.data;persist();renderModule(name);
+    toast(`Import selesai: ${res.added} ditambahkan, ${res.skipped} dilewati.`);
+  }catch(e){toast(e.message,true)}
+  finally{busy(false)}
+};
+</script>
+</body>
+</html>
